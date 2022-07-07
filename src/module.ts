@@ -1,8 +1,9 @@
 import { resolve } from 'path'
 import { fileURLToPath } from 'url'
-import { defineNuxtModule, addVitePlugin, addWebpackPlugin, isNuxt2, } from '@nuxt/kit'
+import { defineNuxtModule, addVitePlugin, addWebpackPlugin, isNuxt2, requireModule } from '@nuxt/kit'
 import type { Options as WebpackPlugin } from 'eslint-webpack-plugin'
 import type { Options as VitePlugin } from 'vite-plugin-eslint'
+import consola from 'consola'
 import { name, version } from '../package.json'
 
 export interface ModuleOptions {
@@ -10,6 +11,8 @@ export interface ModuleOptions {
   webpack: WebpackPlugin
   builder?: 'vite' | 'webpack'
 }
+
+const logger = consola.withScope('nuxt:eslint')
 
 export default defineNuxtModule<ModuleOptions>({
   meta: {
@@ -28,8 +31,8 @@ export default defineNuxtModule<ModuleOptions>({
         './**/*.tsx',
         './**/*.vue'
       ],
-      throwOnWarning: true,
-      throwOnError: true
+      emitWarning: true,
+      emitError: true
     },
     webpack: {
       context: nuxt.options.srcDir,
@@ -40,6 +43,19 @@ export default defineNuxtModule<ModuleOptions>({
     }
   }),
   setup (options, nuxt) {
+    const builder = options.builder || nuxt.options.builder
+    const eslintPath = builder === 'webpack' ? options.webpack.eslintPath : 'eslint'
+
+    try {
+      requireModule(eslintPath)
+    } catch {
+      logger.warn(
+        `The dependency \`${eslintPath}\` not found.`,
+        'Please run `yarn add eslint --dev` or `npm install eslint --save-dev`'
+      )
+      return
+    }
+
     const filesToWatch = [
       '.eslintrc',
       '.eslintrc.json',
@@ -60,8 +76,6 @@ export default defineNuxtModule<ModuleOptions>({
         }
       })
     }
-
-    const builder = options.builder || nuxt.options.builder
 
     if (builder === 'vite') {
       const vitePluginEslint = require('vite-plugin-eslint')
