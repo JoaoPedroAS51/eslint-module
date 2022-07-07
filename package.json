@@ -27,7 +27,7 @@
     "lint": "eslint --ext .js,.ts"
   },
   "dependencies": {
-    "@nuxt/kit": "^3.0.0-rc.4",
+    "@nuxt/kit": "npm:@nuxt/kit-edge@latest",
     "consola": "^2.15.3",
     "eslint-webpack-plugin": "^3.2.0",
     "vite-plugin-eslint": "^1.6.1"
