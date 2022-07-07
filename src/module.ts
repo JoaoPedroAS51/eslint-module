@@ -103,9 +103,19 @@ export default defineNuxtModule<ModuleOptions>({
     if (builder === 'vite') {
       const vitePluginEslint = await (await import('vite-plugin-eslint')).default
 
-      return addVitePlugin(vitePluginEslint(options.vite), {
-        server: false
+      // See https://github.com/nuxt/framework/pull/5560
+      nuxt.hook('vite:extendConfig', (config, { isClient, isServer }) => {
+        if (isServer) {
+          return
+        }
+
+        config.plugins = config.plugins || []
+        config.plugins.push(vitePluginEslint(options.vite))
       })
+
+      // return addVitePlugin(vitePluginEslint(options.vite), {
+      //   server: false
+      // })
     }
 
     if (builder === 'webpack') {
