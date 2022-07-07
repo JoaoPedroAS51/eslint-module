@@ -39,7 +39,7 @@ export default defineNuxtModule<ModuleOptions>({
       lintDirtyModulesOnly: true
     }
   }),
-  async setup (options, nuxt) {
+  setup (options, nuxt) {
     const filesToWatch = [
       '.eslintrc',
       '.eslintrc.json',
@@ -64,7 +64,7 @@ export default defineNuxtModule<ModuleOptions>({
     const builder = options.builder || nuxt.options.builder
 
     if (builder === 'vite') {
-      const vitePluginEslint = await import('vite-plugin-eslint').then(module => module.default)
+      const vitePluginEslint = require('vite-plugin-eslint')
 
       return addVitePlugin(vitePluginEslint(options.vite), {
         build: false
@@ -72,7 +72,7 @@ export default defineNuxtModule<ModuleOptions>({
     }
 
     if (builder === 'webpack') {
-      const EslintWebpackPlugin = await import('eslint-webpack-plugin')
+      const EslintWebpackPlugin = require('eslint-webpack-plugin')
 
       return addWebpackPlugin(new EslintWebpackPlugin(options.webpack), {
         build: false,
