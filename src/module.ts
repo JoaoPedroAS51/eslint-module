@@ -1,9 +1,10 @@
 import { resolve } from 'path'
 import { fileURLToPath } from 'url'
-import { defineNuxtModule, addVitePlugin, addWebpackPlugin, isNuxt2, requireModule } from '@nuxt/kit'
+import { defineNuxtModule, addVitePlugin, addWebpackPlugin, isNuxt2, requireModule, extendViteConfig } from '@nuxt/kit'
+import consola from 'consola'
+// import type { Nuxt } from '@nuxt/schema'
 import type { Options as WebpackPlugin } from 'eslint-webpack-plugin'
 import type { Options as VitePlugin } from 'vite-plugin-eslint'
-import consola from 'consola'
 import { name, version } from '../package.json'
 
 export interface ModuleOptions {
@@ -13,6 +14,28 @@ export interface ModuleOptions {
 }
 
 const logger = consola.withScope('nuxt:eslint')
+
+const resolveBuilder = (options: ModuleOptions, nuxt: any) => {
+  let builder = options.builder
+
+  if (!builder) {
+    switch (nuxt.options.builder) {
+      case '@nuxt/vite-bluider':
+      case 'vite':
+        builder = 'vite'
+        break
+      case '@nuxt/webpack-bluider':
+      case 'webpack':
+        builder = 'webpack'
+        break
+      default:
+        builder = 'vite'
+        break
+    }
+  }
+
+  return builder
+}
 
 export default defineNuxtModule<ModuleOptions>({
   meta: {
@@ -42,9 +65,9 @@ export default defineNuxtModule<ModuleOptions>({
       lintDirtyModulesOnly: true
     }
   }),
-  setup (options, nuxt) {
-    const builder = options.builder || nuxt.options.builder
-    const eslintPath = builder === 'webpack' ? options.webpack.eslintPath : 'eslint'
+  async setup (options, nuxt) {
+    const builder = resolveBuilder(options, nuxt)
+    const eslintPath = builder === 'webpack' ? options.webpack.eslintPath || 'eslint' : 'eslint'
 
     try {
       requireModule(eslintPath)
@@ -78,18 +101,17 @@ export default defineNuxtModule<ModuleOptions>({
     }
 
     if (builder === 'vite') {
-      const vitePluginEslint = require('vite-plugin-eslint')
+      const vitePluginEslint = await (await import('vite-plugin-eslint')).default
 
       return addVitePlugin(vitePluginEslint(options.vite), {
-        build: false
+        server: false
       })
     }
 
     if (builder === 'webpack') {
-      const EslintWebpackPlugin = require('eslint-webpack-plugin')
+      const EslintWebpackPlugin = await (await import('eslint-webpack-plugin')).default
 
       return addWebpackPlugin(new EslintWebpackPlugin(options.webpack), {
-        build: false,
         server: false
       })
     }
