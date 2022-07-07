@@ -5,4 +5,5 @@
 </template>
 
 <script setup>
+var foo = 'bar'
 </script>
