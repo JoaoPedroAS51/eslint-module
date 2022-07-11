@@ -10,10 +10,10 @@ import {
 } from '@nuxt/kit'
 // import type { Nuxt } from '@nuxt/schema'
 import { Plugin as IVitePlguin } from 'vite'
+import ESLintWebpackPlugin from 'eslint-webpack-plugin'
 import type { Options as WebpackPlugin } from 'eslint-webpack-plugin'
 import type { Options as VitePlugin } from 'vite-plugin-eslint'
 import { name, version } from '../package.json'
-import ESLintWebpackPlugin from 'eslint-webpack-plugin'
 
 export interface ModuleOptions {
   vite: VitePlugin,
