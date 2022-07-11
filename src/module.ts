@@ -2,14 +2,18 @@ import { resolve } from 'path'
 import {
   defineNuxtModule,
   // addVitePlugin,
-  addWebpackPlugin, isNuxt2, requireModule,
-  // extendViteConfig,
+  addWebpackPlugin,
+  isNuxt2,
+  resolveModule,
+  importModule,
   useLogger
 } from '@nuxt/kit'
 // import type { Nuxt } from '@nuxt/schema'
+import { Plugin as IVitePlguin } from 'vite'
 import type { Options as WebpackPlugin } from 'eslint-webpack-plugin'
 import type { Options as VitePlugin } from 'vite-plugin-eslint'
 import { name, version } from '../package.json'
+import ESLintWebpackPlugin from 'eslint-webpack-plugin'
 
 export interface ModuleOptions {
   vite: VitePlugin,
@@ -74,7 +78,7 @@ export default defineNuxtModule<ModuleOptions>({
     const eslintPath = builder === 'webpack' ? options.webpack.eslintPath || 'eslint' : 'eslint'
 
     try {
-      requireModule(eslintPath)
+      resolveModule(eslintPath)
     } catch {
       logger.warn(
         `The dependency \`${eslintPath}\` not found.`,
@@ -105,7 +109,7 @@ export default defineNuxtModule<ModuleOptions>({
     }
 
     if (builder === 'vite') {
-      const vitePluginEslint = await (await import('vite-plugin-eslint')).default
+      const vitePluginEslint: (rawOptions?: VitePlugin) => IVitePlguin = await importModule('vite-plugin-eslint')
 
       // See https://github.com/nuxt/framework/pull/5560
       nuxt.hook('vite:extendConfig', (config, { isClient, isServer }) => {
@@ -123,7 +127,7 @@ export default defineNuxtModule<ModuleOptions>({
     }
 
     if (builder === 'webpack') {
-      const EslintWebpackPlugin = await (await import('eslint-webpack-plugin')).default
+      const EslintWebpackPlugin: typeof ESLintWebpackPlugin = await importModule('eslint-webpack-plugin')
 
       return addWebpackPlugin(new EslintWebpackPlugin(options.webpack), {
         server: false
