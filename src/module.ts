@@ -1,49 +1,26 @@
 import { resolve } from 'path'
 import {
   defineNuxtModule,
-  // addVitePlugin,
+  addVitePlugin,
   addWebpackPlugin,
   isNuxt2,
   resolveModule,
   importModule,
   useLogger
 } from '@nuxt/kit'
-// import type { Nuxt } from '@nuxt/schema'
 import { Plugin as IVitePlguin } from 'vite'
 import ESLintWebpackPlugin from 'eslint-webpack-plugin'
 import type { Options as WebpackPlugin } from 'eslint-webpack-plugin'
 import type { Options as VitePlugin } from 'vite-plugin-eslint'
 import { name, version } from '../package.json'
 
+type Builder = '@nuxt/vite-builder' | '@nuxt/webpack-builder'
 export interface ModuleOptions {
-  vite: VitePlugin,
+  vite: VitePlugin
   webpack: WebpackPlugin
-  builder?: 'vite' | 'webpack'
 }
 
 const logger = useLogger('nuxt:eslint')
-
-const resolveBuilder = (options: ModuleOptions, nuxt: any) => {
-  let builder = options.builder
-
-  if (!builder) {
-    switch (nuxt.options.builder) {
-      case '@nuxt/vite-bluider':
-      case 'vite':
-        builder = 'vite'
-        break
-      case '@nuxt/webpack-bluider':
-      case 'webpack':
-        builder = 'webpack'
-        break
-      default:
-        builder = 'vite'
-        break
-    }
-  }
-
-  return builder
-}
 
 export default defineNuxtModule<ModuleOptions>({
   meta: {
@@ -74,8 +51,10 @@ export default defineNuxtModule<ModuleOptions>({
     }
   }),
   async setup (options, nuxt) {
-    const builder = resolveBuilder(options, nuxt)
-    const eslintPath = builder === 'webpack' ? options.webpack.eslintPath || 'eslint' : 'eslint'
+    const eslintPath =
+      (nuxt.options.builder as Builder) === '@nuxt/webpack-builder'
+        ? options.webpack.eslintPath || 'eslint'
+        : 'eslint'
 
     try {
       resolveModule(eslintPath)
@@ -108,30 +87,22 @@ export default defineNuxtModule<ModuleOptions>({
       })
     }
 
-    if (builder === 'vite') {
-      const vitePluginEslint: (rawOptions?: VitePlugin) => IVitePlguin = await importModule('vite-plugin-eslint')
+    if ((nuxt.options.builder as Builder) === '@nuxt/vite-builder') {
+      const vitePluginEslint: (rawOptions?: VitePlugin) => IVitePlguin =
+        await importModule('vite-plugin-eslint')
 
-      // See https://github.com/nuxt/framework/pull/5560
-      nuxt.hook('vite:extendConfig', (config, { isClient, isServer }) => {
-        if (isServer) {
-          return
-        }
-
-        config.plugins = config.plugins || []
-        config.plugins.push(vitePluginEslint(options.vite))
+      return addVitePlugin(vitePluginEslint(options.vite), {
+        server: false
       })
-
-      // return addVitePlugin(vitePluginEslint(options.vite), {
-      //   server: false
-      // })
-    }
-
-    if (builder === 'webpack') {
-      const EslintWebpackPlugin: typeof ESLintWebpackPlugin = await importModule('eslint-webpack-plugin')
+    } else if ((nuxt.options.builder as Builder) === '@nuxt/webpack-builder') {
+      const EslintWebpackPlugin: typeof ESLintWebpackPlugin =
+        await importModule('eslint-webpack-plugin')
 
       return addWebpackPlugin(new EslintWebpackPlugin(options.webpack), {
         server: false
       })
+    } else {
+      logger.warn(`Builder ${nuxt.options.builder} not supported.`)
     }
   }
 })
