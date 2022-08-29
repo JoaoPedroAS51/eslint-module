@@ -30,7 +30,7 @@ export default defineNuxtModule<ModuleOptions>({
   },
   defaults: nuxt => ({
     vite: {
-      cache: true,
+      cache: false,
       fix: false,
       include: [
         './**/*.js',
