@@ -1,30 +1,10 @@
 import { resolve } from 'path';
-import { defineNuxtModule, requireModule, isNuxt2, addWebpackPlugin } from '@nuxt/kit';
-import consola from 'consola';
+import { useLogger, defineNuxtModule, resolveModule, isNuxt2, importModule, addVitePlugin, addWebpackPlugin } from '@nuxt/kit';
 
 const name = "@nuxtjs/eslint-module";
 const version = "3.1.0";
 
-const logger = consola.withScope("nuxt:eslint");
-const resolveBuilder = (options, nuxt) => {
-  let builder = options.builder;
-  if (!builder) {
-    switch (nuxt.options.builder) {
-      case "@nuxt/vite-bluider":
-      case "vite":
-        builder = "vite";
-        break;
-      case "@nuxt/webpack-bluider":
-      case "webpack":
-        builder = "webpack";
-        break;
-      default:
-        builder = "vite";
-        break;
-    }
-  }
-  return builder;
-};
+const logger = useLogger("nuxt:eslint");
 const module = defineNuxtModule({
   meta: {
     name,
@@ -33,7 +13,7 @@ const module = defineNuxtModule({
   },
   defaults: (nuxt) => ({
     vite: {
-      cache: true,
+      cache: false,
       fix: false,
       include: [
         "./**/*.js",
@@ -54,12 +34,14 @@ const module = defineNuxtModule({
     }
   }),
   async setup(options, nuxt) {
-    const builder = resolveBuilder(options, nuxt);
-    const eslintPath = builder === "webpack" ? options.webpack.eslintPath || "eslint" : "eslint";
+    const eslintPath = nuxt.options.builder === "@nuxt/webpack-builder" ? options.webpack.eslintPath || "eslint" : "eslint";
     try {
-      requireModule(eslintPath);
+      resolveModule(eslintPath);
     } catch {
-      logger.warn(`The dependency \`${eslintPath}\` not found.`, "Please run `yarn add eslint --dev` or `npm install eslint --save-dev`");
+      logger.warn(
+        `The dependency \`${eslintPath}\` not found.`,
+        "Please run `yarn add eslint --dev` or `npm install eslint --save-dev`"
+      );
       return;
     }
     const filesToWatch = [
@@ -71,7 +53,9 @@ const module = defineNuxtModule({
     ];
     if (isNuxt2()) {
       nuxt.options.watch = nuxt.options.watch || [];
-      nuxt.options.watch.push(...filesToWatch.map((file) => resolve(nuxt.options.rootDir, file)));
+      nuxt.options.watch.push(
+        ...filesToWatch.map((file) => resolve(nuxt.options.rootDir, file))
+      );
     } else {
       nuxt.hook("builder:watch", async (event, path) => {
         if (event !== "change" && filesToWatch.includes(path)) {
@@ -79,21 +63,18 @@ const module = defineNuxtModule({
         }
       });
     }
-    if (builder === "vite") {
-      const vitePluginEslint = await (await import('vite-plugin-eslint')).default;
-      nuxt.hook("vite:extendConfig", (config, { isClient, isServer }) => {
-        if (isServer) {
-          return;
-        }
-        config.plugins = config.plugins || [];
-        config.plugins.push(vitePluginEslint(options.vite));
+    if (nuxt.options.builder === "@nuxt/vite-builder") {
+      const vitePluginEslint = await importModule("vite-plugin-eslint");
+      return addVitePlugin(vitePluginEslint(options.vite), {
+        server: false
       });
-    }
-    if (builder === "webpack") {
-      const EslintWebpackPlugin = await (await import('eslint-webpack-plugin')).default;
+    } else if (nuxt.options.builder === "@nuxt/webpack-builder") {
+      const EslintWebpackPlugin = await importModule("eslint-webpack-plugin");
       return addWebpackPlugin(new EslintWebpackPlugin(options.webpack), {
         server: false
       });
+    } else {
+      logger.warn(`Builder ${nuxt.options.builder} not supported.`);
     }
   }
 });

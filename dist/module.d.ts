@@ -5,7 +5,6 @@ import { Options } from 'vite-plugin-eslint';
 interface ModuleOptions {
     vite: Options;
     webpack: Options$1;
-    builder?: 'vite' | 'webpack';
 }
 declare const _default: _nuxt_schema.NuxtModule<ModuleOptions>;
 
